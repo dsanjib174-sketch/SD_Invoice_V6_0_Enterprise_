@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+<h2>Quotation Entry</h2>
+<p><b>Workflow:</b> Create → Edit → Approve → Convert to Invoice</p>
+
+<form class="grid">
+<div class="doc-section-title">Document Details</div>
+<select><option>Tax Invoice</option><option>Quotation</option><option>Proforma Invoice</option></select>
+<input placeholder="Document No. Auto / Manual">
+<input type="date" placeholder="Document Date">
+<input type="date" placeholder="Due Date / Valid Till">
+<input placeholder="PO Number">
+<input type="date" placeholder="PO Date">
+<input placeholder="Place of Supply">
+<select><option>Payment Terms</option><option>Immediate</option><option>7 Days</option><option>15 Days</option><option>30 Days</option></select>
+
+<div class="doc-section-title">Customer / Vendor Details</div>
+<input placeholder="Customer / Vendor Name">
+<input placeholder="GSTIN">
+<input placeholder="PAN">
+<input placeholder="State">
+<input placeholder="State Code">
+<input placeholder="Email">
+<input placeholder="Phone">
+<input placeholder="Contact Person">
+
+<div class="doc-section-title">Billing / Shipping Address</div>
+<textarea placeholder="Bill To Address"></textarea>
+<textarea placeholder="Ship To Address"></textarea>
+</form>
+
+<div class="doc-section-title">Item Details with GST</div>
+<table class="line-table">
+<tr>
+<th>#</th><th>Item / Service</th><th>Description</th><th>HSN/SAC</th><th>Qty</th><th>UOM</th><th>Rate</th><th>Discount</th><th>GST %</th><th>CGST</th><th>SGST</th><th>IGST</th><th>Total</th>
+</tr>
+<tr>
+<td>1</td>
+<td><input placeholder="Item Name"></td>
+<td><input placeholder="Description"></td>
+<td><input placeholder="HSN/SAC"></td>
+<td><input placeholder="Qty"></td>
+<td><select><option>Nos</option><option>Kg</option><option>Ltr</option><option>Service</option></select></td>
+<td><input placeholder="Rate"></td>
+<td><input placeholder="Discount"></td>
+<td><input placeholder="GST %"></td>
+<td><input placeholder="CGST"></td>
+<td><input placeholder="SGST"></td>
+<td><input placeholder="IGST"></td>
+<td><input placeholder="Total"></td>
+</tr>
+</table>
+
+<form class="grid">
+<div class="doc-section-title">Tax Summary</div>
+<input placeholder="Taxable Amount">
+<input placeholder="CGST Total">
+<input placeholder="SGST Total">
+<input placeholder="IGST Total">
+<input placeholder="Total GST">
+<input placeholder="Round Off">
+<input placeholder="Grand Total">
+<input placeholder="Amount in Words">
+
+<div class="doc-section-title">Bank / Payment Details</div>
+<input placeholder="Bank Name">
+<input placeholder="Account Number">
+<input placeholder="IFSC Code">
+<input placeholder="UPI ID">
+<label>Payment QR <input type="file"></label>
+<select><option>Payment Mode</option><option>UPI</option><option>NEFT</option><option>Cash</option><option>Cheque</option></select>
+
+<div class="doc-section-title">Terms, Signature & Notes</div>
+<textarea placeholder="Terms & Conditions"></textarea>
+<textarea placeholder="Internal Notes / Customer Notes"></textarea>
+<label>Digital Signature <input type="file"></label>
+<label>Company Seal <input type="file"></label>
+</form>
+
+<div class="action-row">
+<button type="button">Save Draft</button>
+<button type="button">Approve</button>
+<button type="button">Convert to Invoice</button>
+<a class="button-link" href="/invoice/preview">Preview</a>
+<button type="button">Print / PDF</button>
+</div>
+<p class="form-note">This V5.7 build fixes document entry formats. Calculation/database workflow will be connected in the next logic build.</p>
+
+</section>
+{% endblock %}
