@@ -1,12 +1,3 @@
-from flask import Blueprint, render_template
-from .auth import login_required
-client_bp = Blueprint("client", __name__)
-@client_bp.route("/company-profile")
-@login_required
-def company_profile(): return render_template("client/company_profile.html")
-@client_bp.route("/branches")
-@login_required
-def branches(): return render_template("client/branches.html")
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from werkzeug.security import generate_password_hash
 from .auth import login_required
@@ -50,7 +41,11 @@ def load_branches():
 
     if not branches:
         branches = [
-            {"id": uuid.uuid4().hex, "branch_name": "Main Branch", "branch_code": "MAIN"}
+            {
+                "id": uuid.uuid4().hex,
+                "branch_name": "Main Branch",
+                "branch_code": "MAIN"
+            }
         ]
         save_json(BRANCHES_FILE, branches)
 
@@ -148,16 +143,7 @@ def users():
     )
 
 
-
-
-
 @client_bp.route("/communication")
 @login_required
 def communication():
     return render_template("client/communication.html")
-@client_bp.route("/change-password")
-@login_required
-def change_password(): return render_template("client/change_password.html")
-@client_bp.route("/communication")
-@login_required
-def communication(): return render_template("client/communication.html")
