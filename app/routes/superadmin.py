@@ -318,7 +318,7 @@ def client_data():
 
 @superadmin_bp.route("/subscription", methods=["GET", "POST"])
 @login_required
-def subscription:
+def subscription():
     subscriptions = load_subscriptions()
     clients_data = load_clients()
     user_email = get_current_user_email()
