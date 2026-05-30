@@ -148,10 +148,7 @@ def users():
     )
 
 
-@client_bp.route("/change-password")
-@login_required
-def change_password():
-    return render_template("client/change_password.html")
+
 
 
 @client_bp.route("/communication")
