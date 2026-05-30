@@ -13,33 +13,68 @@ def _users_path():
     return os.path.join(current_app.config["UPLOAD_FOLDER"], USERS_FILE)
 
 
-def load_users():
-    path = _users_path()
-    if not os.path.exists(path):
-        default_users = [
-            {
-                "id": uuid.uuid4().hex,
-                "name": "Super Admin",
-                "email": "superadmin@sdinvoice.com",
-                "user_id": "superadmin@sdinvoice.com",
-                "password": generate_password_hash("Admin@123"),
-                "role": "superadmin",
-                "branch": "All Branches",
-                "status": "Active",
-                "created_at": datetime.now().strftime("%d-%m-%Y %I:%M %p")
-            }
-        ]
-        save_users(default_users)
-        return default_users
-
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
 def save_users(items):
     os.makedirs(os.path.dirname(_users_path()), exist_ok=True)
     with open(_users_path(), "w", encoding="utf-8") as f:
         json.dump(items, f, indent=2, ensure_ascii=False)
+
+
+def default_users():
+    return [
+        {
+            "id": uuid.uuid4().hex,
+            "name": "Super Admin",
+            "email": "superadmin@sdinvoice.com",
+            "user_id": "superadmin@sdinvoice.com",
+            "password": generate_password_hash("Admin@123"),
+            "role": "superadmin",
+            "branch": "All Branches",
+            "company": "SMART DADA SOLUTION",
+            "status": "Active",
+            "created_at": datetime.now().strftime("%d-%m-%Y %I:%M %p")
+        },
+        {
+            "id": uuid.uuid4().hex,
+            "name": "Demo Client",
+            "email": "demo@sdinvoice.com",
+            "user_id": "demo@sdinvoice.com",
+            "password": generate_password_hash("Demo@123"),
+            "role": "client",
+            "branch": "Main Branch",
+            "company": "Demo Company",
+            "status": "Active",
+            "created_at": datetime.now().strftime("%d-%m-%Y %I:%M %p")
+        }
+    ]
+
+
+def load_users():
+    path = _users_path()
+
+    if not os.path.exists(path):
+        users = default_users()
+        save_users(users)
+        return users
+
+    with open(path, "r", encoding="utf-8") as f:
+        users = json.load(f)
+
+    existing_emails = [u.get("email") for u in users]
+
+    changed = False
+
+    if "superadmin@sdinvoice.com" not in existing_emails:
+        users.append(default_users()[0])
+        changed = True
+
+    if "demo@sdinvoice.com" not in existing_emails:
+        users.append(default_users()[1])
+        changed = True
+
+    if changed:
+        save_users(users)
+
+    return users
 
 
 def login_required(view):
@@ -98,6 +133,7 @@ def client_login():
         if user and user.get("role") != "superadmin":
             session["login_type"] = "client"
             session["user"] = user.get("email")
+            session["email"] = user.get("email")
             session["user_id"] = user.get("user_id")
             session["user_name"] = user.get("name")
             session["role"] = user.get("role")
@@ -124,6 +160,7 @@ def admin_login():
         if user:
             session["login_type"] = "superadmin"
             session["user"] = user.get("email")
+            session["email"] = user.get("email")
             session["user_id"] = user.get("user_id")
             session["user_name"] = user.get("name")
             session["role"] = "superadmin"
