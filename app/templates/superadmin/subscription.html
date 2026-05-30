@@ -1,7 +1,67 @@
 {% extends "base.html" %}
 {% block content %}
+
 <section>
-<h2>Subscription</h2>
-<table><tr><th>Plan</th><th>Users</th><th>Branches</th><th>Invoices</th></tr><tr><td>Trial</td><td>1</td><td>1</td><td>100</td></tr></table>
+  <h2>Subscription Invoice</h2>
+
+  {% if user_email == "superadmin@sdinvoice.com" %}
+  <h3>Generate Subscription Invoice</h3>
+
+  <form method="POST">
+    <input type="hidden" name="action" value="create_invoice">
+
+    <select name="client_id" required>
+      <option value="">Select Client</option>
+      {% for c in clients %}
+      <option value="{{ c.id }}">
+        {{ c.company }} - {{ c.email }} - {{ c.plan_name }}
+      </option>
+      {% endfor %}
+    </select>
+
+    <input type="number" name="amount" placeholder="Subscription Amount" required>
+
+    <button type="submit">Generate Invoice</button>
+  </form>
+
+  <br>
+  {% endif %}
+
+  <h3>Subscription Invoices</h3>
+
+  <table border="1" cellpadding="8" cellspacing="0" width="100%">
+    <tr>
+      <th>Invoice No</th>
+      <th>Client</th>
+      <th>Email</th>
+      <th>Plan</th>
+      <th>Active Date</th>
+      <th>Expire Date</th>
+      <th>Amount</th>
+      <th>Status</th>
+      <th>Created At</th>
+    </tr>
+
+    {% if subscriptions %}
+      {% for s in subscriptions %}
+      <tr>
+        <td>{{ s.invoice_no }}</td>
+        <td>{{ s.client_company }}</td>
+        <td>{{ s.client_email }}</td>
+        <td>{{ s.plan_name }}</td>
+        <td>{{ s.active_date }}</td>
+        <td>{{ s.expire_date }}</td>
+        <td>₹{{ s.amount }}</td>
+        <td>{{ s.status }}</td>
+        <td>{{ s.created_at }}</td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="9">No subscription invoice found.</td>
+      </tr>
+    {% endif %}
+  </table>
 </section>
+
 {% endblock %}
