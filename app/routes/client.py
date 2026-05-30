@@ -44,12 +44,38 @@ def load_branches():
             {
                 "id": uuid.uuid4().hex,
                 "branch_name": "Main Branch",
-                "branch_code": "MAIN"
+                "branch_code": "MAIN",
+                "client_email": session.get("user", "")
             }
         ]
         save_json(BRANCHES_FILE, branches)
 
     return branches
+
+
+def current_client_email():
+    return session.get("user") or session.get("email") or ""
+
+
+def is_superadmin():
+    return session.get("login_type") == "superadmin" or session.get("role") == "superadmin"
+
+
+def visible_users_for_current_login(users_data):
+    if is_superadmin():
+        return users_data
+
+    login_email = current_client_email()
+
+    return [
+        u for u in users_data
+        if u.get("role") != "superadmin"
+        and (
+            u.get("created_by") == login_email
+            or u.get("email") == login_email
+            or u.get("client_email") == login_email
+        )
+    ]
 
 
 @client_bp.route("/company-profile")
@@ -69,6 +95,7 @@ def branches():
 def users():
     users_data = load_users()
     branches_data = load_branches()
+    login_email = current_client_email()
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -78,7 +105,6 @@ def users():
             email = request.form.get("email", "").strip()
             user_id = request.form.get("user_id", "").strip()
             password = request.form.get("password", "").strip()
-            role = request.form.get("role", "client").strip()
             branch = request.form.get("branch", "").strip()
             status = request.form.get("status", "Active").strip()
 
@@ -91,8 +117,12 @@ def users():
                     flash("User ID or Email already exists.", "error")
                     return redirect(url_for("client.users"))
 
-            if session.get("login_type") != "superadmin":
+            if is_superadmin():
+                role = request.form.get("role", "client").strip()
+                client_email = request.form.get("client_email", "").strip() or email
+            else:
                 role = "client"
+                client_email = login_email
 
             users_data.insert(0, {
                 "id": uuid.uuid4().hex,
@@ -103,7 +133,8 @@ def users():
                 "role": role,
                 "branch": branch,
                 "status": status,
-                "created_by": session.get("user", ""),
+                "client_email": client_email,
+                "created_by": login_email,
                 "created_at": datetime.now().strftime("%d-%m-%Y %I:%M %p")
             })
 
@@ -116,14 +147,27 @@ def users():
 
             for u in users_data:
                 if u.get("id") == user_record_id:
+
+                    if not is_superadmin() and u.get("role") == "superadmin":
+                        flash("You cannot update Super Admin user.", "error")
+                        return redirect(url_for("client.users"))
+
+                    if not is_superadmin() and u.get("client_email") != login_email and u.get("email") != login_email:
+                        flash("You cannot update another client's user.", "error")
+                        return redirect(url_for("client.users"))
+
                     u["name"] = request.form.get("name", "").strip()
                     u["email"] = request.form.get("email", "").strip()
                     u["user_id"] = request.form.get("user_id", "").strip()
                     u["branch"] = request.form.get("branch", "").strip()
                     u["status"] = request.form.get("status", "Active").strip()
 
-                    if session.get("login_type") == "superadmin":
+                    if is_superadmin():
                         u["role"] = request.form.get("role", "client").strip()
+                        u["client_email"] = request.form.get("client_email", u.get("client_email", "")).strip()
+                    else:
+                        u["role"] = "client"
+                        u["client_email"] = login_email
 
                     if new_password:
                         u["password"] = generate_password_hash(new_password)
@@ -136,9 +180,11 @@ def users():
 
         return redirect(url_for("client.users"))
 
+    visible_users = visible_users_for_current_login(users_data)
+
     return render_template(
         "client/users.html",
-        users=users_data,
+        users=visible_users,
         branches=branches_data
     )
 
