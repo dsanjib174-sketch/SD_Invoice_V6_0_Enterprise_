@@ -6,6 +6,9 @@ from datetime import datetime
 documents_bp = Blueprint("documents", __name__)
 
 QUOTATION_FILE = "quotations.json"
+PROFORMA_FILE = "proformas.json"
+INVOICE_FILE = "invoices.json"
+DELIVERY_CHALLAN_FILE = "delivery_challans.json"
 ROC_FILE = "rate_contracts.json"
 
 
@@ -15,17 +18,14 @@ def _json_path(filename):
 
 def load_json(filename):
     path = _json_path(filename)
-
     if not os.path.exists(path):
         return []
-
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def save_json(filename, data):
     os.makedirs(os.path.dirname(_json_path(filename)), exist_ok=True)
-
     with open(_json_path(filename), "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -38,11 +38,49 @@ def is_superadmin():
     return session.get("login_type") == "superadmin" or session.get("role") == "superadmin"
 
 
+def get_financial_year():
+    today = datetime.now()
+    year = today.year
+
+    if today.month >= 4:
+        return f"{str(year)[-2:]}-{str(year + 1)[-2:]}"
+    return f"{str(year - 1)[-2:]}-{str(year)[-2:]}"
+
+
+def generate_doc_no(prefix, existing_docs):
+    fy = get_financial_year()
+    count = len(existing_docs) + 1
+    return f"SD/{prefix}/{fy}/{str(count).zfill(3)}"
+
+
+def load_roc():
+    return load_json(ROC_FILE)
+
+
+def get_vendor_names():
+    contracts = load_roc()
+    vendors = sorted(set([
+        c.get("vendor_name", "")
+        for c in contracts
+        if c.get("vendor_name") and c.get("status") == "Active"
+    ]))
+    return vendors
+
+
+def visible_data(data):
+    if is_superadmin():
+        return data
+
+    user_email = current_user_email()
+    return [d for d in data if d.get("client_email") == user_email]
+
+
 @documents_bp.route("/quotation", methods=["GET", "POST"])
 @login_required
 def quotation():
     quotations = load_json(QUOTATION_FILE)
-    contracts = load_json(ROC_FILE)
+    contracts = load_roc()
+    vendors = get_vendor_names()
     user_email = current_user_email()
 
     if request.method == "POST":
@@ -50,33 +88,27 @@ def quotation():
 
         if action == "save_quotation":
             quotation_no = request.form.get("quotation_no", "").strip()
-            vendor_name = request.form.get("vendor_name", "").strip()
-            customer_name = request.form.get("customer_name", "").strip()
-            product_name = request.form.get("product_name", "").strip()
-            hsn_code = request.form.get("hsn_code", "").strip()
-            unit = request.form.get("unit", "").strip()
-            rate = request.form.get("rate", "").strip()
-            gst_percent = request.form.get("gst_percent", "").strip()
-            remarks = request.form.get("remarks", "").strip()
-
             if not quotation_no:
-                quotation_no = f"QT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-
-            if not vendor_name or not product_name or not rate:
-                flash("Vendor Name, Product/Service Name and Rate are required.", "error")
-                return redirect(url_for("documents.quotation"))
+                quotation_no = generate_doc_no("QT", quotations)
 
             quotations.insert(0, {
                 "id": uuid.uuid4().hex,
                 "quotation_no": quotation_no,
-                "vendor_name": vendor_name,
-                "customer_name": customer_name,
-                "product_name": product_name,
-                "hsn_code": hsn_code,
-                "unit": unit,
-                "rate": rate,
-                "gst_percent": gst_percent,
-                "remarks": remarks,
+                "vendor_name": request.form.get("vendor_name", "").strip(),
+                "customer_name": request.form.get("customer_name", "").strip(),
+                "product_name": request.form.get("product_name", "").strip(),
+                "hsn_code": request.form.get("hsn_code", "").strip(),
+                "unit": request.form.get("unit", "").strip(),
+                "qty": request.form.get("qty", "1").strip(),
+                "rate": request.form.get("rate", "0").strip(),
+                "gst_percent": request.form.get("gst_percent", "0").strip(),
+                "taxable_amount": request.form.get("taxable_amount", "0").strip(),
+                "cgst": request.form.get("cgst", "0").strip(),
+                "sgst": request.form.get("sgst", "0").strip(),
+                "igst": request.form.get("igst", "0").strip(),
+                "total_gst": request.form.get("total_gst", "0").strip(),
+                "grand_total": request.form.get("grand_total", "0").strip(),
+                "remarks": request.form.get("remarks", "").strip(),
                 "status": "Pending",
                 "client_email": user_email,
                 "created_by": user_email,
@@ -91,11 +123,6 @@ def quotation():
 
             for q in quotations:
                 if q.get("id") == quotation_id:
-
-                    if not is_superadmin() and q.get("client_email") != user_email:
-                        flash("You cannot edit another client's quotation.", "error")
-                        return redirect(url_for("documents.quotation"))
-
                     if q.get("status") == "Approved":
                         flash("Approved quotation cannot be edited.", "error")
                         return redirect(url_for("documents.quotation"))
@@ -106,8 +133,15 @@ def quotation():
                     q["product_name"] = request.form.get("product_name", "").strip()
                     q["hsn_code"] = request.form.get("hsn_code", "").strip()
                     q["unit"] = request.form.get("unit", "").strip()
-                    q["rate"] = request.form.get("rate", "").strip()
-                    q["gst_percent"] = request.form.get("gst_percent", "").strip()
+                    q["qty"] = request.form.get("qty", "1").strip()
+                    q["rate"] = request.form.get("rate", "0").strip()
+                    q["gst_percent"] = request.form.get("gst_percent", "0").strip()
+                    q["taxable_amount"] = request.form.get("taxable_amount", "0").strip()
+                    q["cgst"] = request.form.get("cgst", "0").strip()
+                    q["sgst"] = request.form.get("sgst", "0").strip()
+                    q["igst"] = request.form.get("igst", "0").strip()
+                    q["total_gst"] = request.form.get("total_gst", "0").strip()
+                    q["grand_total"] = request.form.get("grand_total", "0").strip()
                     q["remarks"] = request.form.get("remarks", "").strip()
                     q["updated_at"] = datetime.now().strftime("%d-%m-%Y %I:%M %p")
                     break
@@ -120,15 +154,6 @@ def quotation():
 
             for q in quotations:
                 if q.get("id") == quotation_id:
-
-                    if not is_superadmin() and q.get("client_email") != user_email:
-                        flash("You cannot approve another client's quotation.", "error")
-                        return redirect(url_for("documents.quotation"))
-
-                    if q.get("status") == "Approved":
-                        flash("Quotation already approved.", "error")
-                        return redirect(url_for("documents.quotation"))
-
                     q["status"] = "Approved"
                     q["approved_by"] = user_email
                     q["approved_at"] = datetime.now().strftime("%d-%m-%Y %I:%M %p")
@@ -158,25 +183,145 @@ def quotation():
 
         return redirect(url_for("documents.quotation"))
 
-    if not is_superadmin():
-        quotations = [q for q in quotations if q.get("client_email") == user_email]
+    return render_template(
+        "documents/quotation.html",
+        quotations=visible_data(quotations),
+        vendors=vendors,
+        contracts=contracts,
+        doc_no=generate_doc_no("QT", quotations)
+    )
 
-    return render_template("documents/quotation.html", quotations=quotations)
 
-
-@documents_bp.route("/proforma")
+@documents_bp.route("/proforma", methods=["GET", "POST"])
 @login_required
 def proforma():
-    return render_template("documents/proforma.html")
+    proformas = load_json(PROFORMA_FILE)
+    contracts = load_roc()
+    vendors = get_vendor_names()
+    user_email = current_user_email()
+
+    if request.method == "POST":
+        proforma_no = request.form.get("proforma_no", "").strip()
+        if not proforma_no:
+            proforma_no = generate_doc_no("PI", proformas)
+
+        proformas.insert(0, {
+            "id": uuid.uuid4().hex,
+            "proforma_no": proforma_no,
+            "vendor_name": request.form.get("vendor_name", "").strip(),
+            "customer_name": request.form.get("customer_name", "").strip(),
+            "product_name": request.form.get("product_name", "").strip(),
+            "hsn_code": request.form.get("hsn_code", "").strip(),
+            "unit": request.form.get("unit", "").strip(),
+            "qty": request.form.get("qty", "1").strip(),
+            "rate": request.form.get("rate", "0").strip(),
+            "gst_percent": request.form.get("gst_percent", "0").strip(),
+            "taxable_amount": request.form.get("taxable_amount", "0").strip(),
+            "cgst": request.form.get("cgst", "0").strip(),
+            "sgst": request.form.get("sgst", "0").strip(),
+            "igst": request.form.get("igst", "0").strip(),
+            "total_gst": request.form.get("total_gst", "0").strip(),
+            "grand_total": request.form.get("grand_total", "0").strip(),
+            "status": "Pending",
+            "client_email": user_email,
+            "created_at": datetime.now().strftime("%d-%m-%Y %I:%M %p")
+        })
+
+        save_json(PROFORMA_FILE, proformas)
+        flash("Proforma invoice saved successfully.", "success")
+        return redirect(url_for("documents.proforma"))
+
+    return render_template(
+        "documents/proforma.html",
+        proformas=visible_data(proformas),
+        vendors=vendors,
+        contracts=contracts,
+        doc_no=generate_doc_no("PI", proformas)
+    )
 
 
-@documents_bp.route("/invoice")
+@documents_bp.route("/invoice", methods=["GET", "POST"])
 @login_required
 def invoice():
-    return render_template("documents/invoice.html")
+    invoices = load_json(INVOICE_FILE)
+    contracts = load_roc()
+    vendors = get_vendor_names()
+    user_email = current_user_email()
+
+    if request.method == "POST":
+        invoice_no = request.form.get("invoice_no", "").strip()
+        if not invoice_no:
+            invoice_no = generate_doc_no("INV", invoices)
+
+        invoices.insert(0, {
+            "id": uuid.uuid4().hex,
+            "invoice_no": invoice_no,
+            "vendor_name": request.form.get("vendor_name", "").strip(),
+            "customer_name": request.form.get("customer_name", "").strip(),
+            "product_name": request.form.get("product_name", "").strip(),
+            "hsn_code": request.form.get("hsn_code", "").strip(),
+            "unit": request.form.get("unit", "").strip(),
+            "qty": request.form.get("qty", "1").strip(),
+            "rate": request.form.get("rate", "0").strip(),
+            "gst_percent": request.form.get("gst_percent", "0").strip(),
+            "taxable_amount": request.form.get("taxable_amount", "0").strip(),
+            "cgst": request.form.get("cgst", "0").strip(),
+            "sgst": request.form.get("sgst", "0").strip(),
+            "igst": request.form.get("igst", "0").strip(),
+            "total_gst": request.form.get("total_gst", "0").strip(),
+            "grand_total": request.form.get("grand_total", "0").strip(),
+            "status": "Generated",
+            "client_email": user_email,
+            "created_at": datetime.now().strftime("%d-%m-%Y %I:%M %p")
+        })
+
+        save_json(INVOICE_FILE, invoices)
+        flash("Tax invoice saved successfully.", "success")
+        return redirect(url_for("documents.invoice"))
+
+    return render_template(
+        "documents/invoice.html",
+        invoices=visible_data(invoices),
+        vendors=vendors,
+        contracts=contracts,
+        doc_no=generate_doc_no("INV", invoices)
+    )
 
 
-@documents_bp.route("/delivery-challan")
+@documents_bp.route("/delivery-challan", methods=["GET", "POST"])
 @login_required
 def delivery_challan():
-    return render_template("documents/delivery_challan.html")
+    challans = load_json(DELIVERY_CHALLAN_FILE)
+    contracts = load_roc()
+    vendors = get_vendor_names()
+    user_email = current_user_email()
+
+    if request.method == "POST":
+        challan_no = request.form.get("challan_no", "").strip()
+        if not challan_no:
+            challan_no = generate_doc_no("DC", challans)
+
+        challans.insert(0, {
+            "id": uuid.uuid4().hex,
+            "challan_no": challan_no,
+            "vendor_name": request.form.get("vendor_name", "").strip(),
+            "customer_name": request.form.get("customer_name", "").strip(),
+            "product_name": request.form.get("product_name", "").strip(),
+            "hsn_code": request.form.get("hsn_code", "").strip(),
+            "unit": request.form.get("unit", "").strip(),
+            "qty": request.form.get("qty", "1").strip(),
+            "client_email": user_email,
+            "created_at": datetime.now().strftime("%d-%m-%Y %I:%M %p")
+        })
+
+        save_json(DELIVERY_CHALLAN_FILE, challans)
+        flash("Delivery challan saved successfully.", "success")
+        return redirect(url_for("documents.delivery_challan"))
+
+    return render_template(
+        "documents/delivery_challan.html",
+        challans=visible_data(challans),
+        vendors=vendors,
+        contracts=contracts,
+        doc_no=generate_doc_no("DC", challans)
+    )
