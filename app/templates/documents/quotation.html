@@ -1,91 +1,114 @@
 {% extends "base.html" %}
 {% block content %}
+
 <section>
-<h2>Quotation Entry</h2>
-<p><b>Workflow:</b> Create → Edit → Approve → Convert to Invoice</p>
+  <h2>Quotation</h2>
 
-<form class="grid">
-<div class="doc-section-title">Document Details</div>
-<select><option>Tax Invoice</option><option>Quotation</option><option>Proforma Invoice</option></select>
-<input placeholder="Document No. Auto / Manual">
-<input type="date" placeholder="Document Date">
-<input type="date" placeholder="Due Date / Valid Till">
-<input placeholder="PO Number">
-<input type="date" placeholder="PO Date">
-<input placeholder="Place of Supply">
-<select><option>Payment Terms</option><option>Immediate</option><option>7 Days</option><option>15 Days</option><option>30 Days</option></select>
+  <h3>Create New Quotation</h3>
 
-<div class="doc-section-title">Customer / Vendor Details</div>
-<input placeholder="Customer / Vendor Name">
-<input placeholder="GSTIN">
-<input placeholder="PAN">
-<input placeholder="State">
-<input placeholder="State Code">
-<input placeholder="Email">
-<input placeholder="Phone">
-<input placeholder="Contact Person">
+  <form method="POST" class="grid">
+    <input type="hidden" name="action" value="save_quotation">
 
-<div class="doc-section-title">Billing / Shipping Address</div>
-<textarea placeholder="Bill To Address"></textarea>
-<textarea placeholder="Ship To Address"></textarea>
-</form>
+    <input name="quotation_no" placeholder="Quotation No">
+    <input name="vendor_name" placeholder="Vendor Name" required>
+    <input name="customer_name" placeholder="Customer Name">
+    <input name="product_name" placeholder="Product / Service Name" required>
+    <input name="hsn_code" placeholder="HSN / SAC Code">
+    <input name="unit" placeholder="Unit">
+    <input name="rate" type="number" step="0.01" placeholder="Rate" required>
+    <input name="gst_percent" type="number" step="0.01" placeholder="GST %">
+    <input name="remarks" placeholder="Remarks">
 
-<div class="doc-section-title">Item Details with GST</div>
-<table class="line-table">
-<tr>
-<th>#</th><th>Item / Service</th><th>Description</th><th>HSN/SAC</th><th>Qty</th><th>UOM</th><th>Rate</th><th>Discount</th><th>GST %</th><th>CGST</th><th>SGST</th><th>IGST</th><th>Total</th>
-</tr>
-<tr>
-<td>1</td>
-<td><input placeholder="Item Name"></td>
-<td><input placeholder="Description"></td>
-<td><input placeholder="HSN/SAC"></td>
-<td><input placeholder="Qty"></td>
-<td><select><option>Nos</option><option>Kg</option><option>Ltr</option><option>Service</option></select></td>
-<td><input placeholder="Rate"></td>
-<td><input placeholder="Discount"></td>
-<td><input placeholder="GST %"></td>
-<td><input placeholder="CGST"></td>
-<td><input placeholder="SGST"></td>
-<td><input placeholder="IGST"></td>
-<td><input placeholder="Total"></td>
-</tr>
-</table>
+    <button type="submit">Save Quotation</button>
+  </form>
 
-<form class="grid">
-<div class="doc-section-title">Tax Summary</div>
-<input placeholder="Taxable Amount">
-<input placeholder="CGST Total">
-<input placeholder="SGST Total">
-<input placeholder="IGST Total">
-<input placeholder="Total GST">
-<input placeholder="Round Off">
-<input placeholder="Grand Total">
-<input placeholder="Amount in Words">
+  <br>
 
-<div class="doc-section-title">Bank / Payment Details</div>
-<input placeholder="Bank Name">
-<input placeholder="Account Number">
-<input placeholder="IFSC Code">
-<input placeholder="UPI ID">
-<label>Payment QR <input type="file"></label>
-<select><option>Payment Mode</option><option>UPI</option><option>NEFT</option><option>Cash</option><option>Cheque</option></select>
+  <h3>Saved Quotations</h3>
 
-<div class="doc-section-title">Terms, Signature & Notes</div>
-<textarea placeholder="Terms & Conditions"></textarea>
-<textarea placeholder="Internal Notes / Customer Notes"></textarea>
-<label>Digital Signature <input type="file"></label>
-<label>Company Seal <input type="file"></label>
-</form>
+  <table border="1" cellpadding="8" cellspacing="0" width="100%">
+    <tr>
+      <th>Quotation No</th>
+      <th>Vendor</th>
+      <th>Customer</th>
+      <th>Product / Service</th>
+      <th>HSN/SAC</th>
+      <th>Unit</th>
+      <th>Rate</th>
+      <th>GST %</th>
+      <th>Status</th>
+      <th>Remarks</th>
+      <th>Action</th>
+    </tr>
 
-<div class="action-row">
-<button type="button">Save Draft</button>
-<button type="button">Approve</button>
-<button type="button">Convert to Invoice</button>
-<a class="button-link" href="/invoice/preview">Preview</a>
-<button type="button">Print / PDF</button>
-</div>
-<p class="form-note">This V5.7 build fixes document entry formats. Calculation/database workflow will be connected in the next logic build.</p>
+    {% if quotations %}
+      {% for q in quotations %}
+      <tr>
+        <form method="POST">
+          <input type="hidden" name="quotation_id" value="{{ q.id }}">
+
+          <td>
+            <input name="quotation_no" value="{{ q.quotation_no }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            <input name="vendor_name" value="{{ q.vendor_name }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            <input name="customer_name" value="{{ q.customer_name }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            <input name="product_name" value="{{ q.product_name }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            <input name="hsn_code" value="{{ q.hsn_code }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            <input name="unit" value="{{ q.unit }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            <input name="rate" type="number" step="0.01" value="{{ q.rate }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            <input name="gst_percent" type="number" step="0.01" value="{{ q.gst_percent }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            {% if q.status == "Approved" %}
+              <b style="color:green;">Approved</b>
+            {% else %}
+              <b style="color:orange;">Pending</b>
+            {% endif %}
+          </td>
+
+          <td>
+            <input name="remarks" value="{{ q.remarks }}" {% if q.status == "Approved" %}readonly{% endif %}>
+          </td>
+
+          <td>
+            {% if q.status != "Approved" %}
+              <button type="submit" name="action" value="update_quotation">Edit / Update</button>
+              <button type="submit" name="action" value="approve_quotation">Approve</button>
+            {% else %}
+              Added to ROC
+            {% endif %}
+          </td>
+        </form>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="11">No quotations found.</td>
+      </tr>
+    {% endif %}
+  </table>
 
 </section>
+
 {% endblock %}
