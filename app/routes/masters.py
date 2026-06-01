@@ -52,6 +52,7 @@ def rate_contract():
                 "vendor_email": request.form.get("vendor_email", "").strip(),
                 "vendor_mobile": request.form.get("vendor_mobile", "").strip(),
                 "vendor_gst": request.form.get("vendor_gst", "").strip(),
+                "vendor_pan": request.form.get("vendor_pan", "").strip(),
                 "vendor_address": request.form.get("vendor_address", "").strip(),
                 "client_email": user_email,
                 "created_at": datetime.now().strftime("%d-%m-%Y %I:%M %p")
