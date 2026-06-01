@@ -4,21 +4,41 @@
 <section>
   <h2>Rate of Contract</h2>
 
-  <form method="POST" class="grid">
-    <input type="hidden" name="action" value="add">
+  <h3>1. Vendor Details</h3>
 
-    {% if is_superadmin %}
-    <input name="client_email" placeholder="Client Email">
-    {% endif %}
+  <form method="POST" class="grid">
+    <input type="hidden" name="action" value="save_vendor">
 
     <input name="vendor_name" placeholder="Vendor Name" required>
+    <input name="vendor_email" placeholder="Vendor Email">
+    <input name="vendor_mobile" placeholder="Vendor Mobile">
+    <input name="vendor_gst" placeholder="Vendor GST No">
+    <input name="vendor_address" placeholder="Vendor Address">
+
+    <button type="submit">Save Vendor</button>
+  </form>
+
+  <br>
+
+  <h3>2. Rate Contract Details</h3>
+
+  <form method="POST" class="grid">
+    <input type="hidden" name="action" value="save_contract">
+
+    <select name="vendor_name" required>
+      <option value="">Select Vendor</option>
+      {% for v in vendors %}
+      <option value="{{ v.vendor_name }}">{{ v.vendor_name }}</option>
+      {% endfor %}
+    </select>
+
     <input name="product_name" placeholder="Product / Service Name" required>
     <input name="hsn_code" placeholder="HSN / SAC Code">
     <input name="unit" placeholder="Unit">
     <input name="rate" type="number" step="0.01" placeholder="Rate" required>
     <input name="gst_percent" type="number" step="0.01" placeholder="GST %">
-    <input name="valid_from" type="date" placeholder="Valid From">
-    <input name="valid_to" type="date" placeholder="Valid To">
+    <input name="valid_from" type="date">
+    <input name="valid_to" type="date">
     <input name="remarks" placeholder="Remarks">
 
     <button type="submit">Save Contract</button>
@@ -26,7 +46,7 @@
 
   <br>
 
-  <h3>Saved Contracts</h3>
+  <h3>Saved Rate Contracts</h3>
 
   <table border="1" cellpadding="8" cellspacing="0" width="100%">
     <tr>
@@ -38,6 +58,7 @@
       <th>GST %</th>
       <th>Valid From</th>
       <th>Valid To</th>
+      <th>Source</th>
       <th>Status</th>
       <th>Remarks</th>
       <th>Action</th>
@@ -47,7 +68,7 @@
       {% for c in contracts %}
       <tr>
         <form method="POST">
-          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="action" value="update_contract">
           <input type="hidden" name="contract_id" value="{{ c.id }}">
 
           <td><input name="vendor_name" value="{{ c.vendor_name }}" required></td>
@@ -58,6 +79,7 @@
           <td><input name="gst_percent" type="number" step="0.01" value="{{ c.gst_percent }}"></td>
           <td><input name="valid_from" type="date" value="{{ c.valid_from }}"></td>
           <td><input name="valid_to" type="date" value="{{ c.valid_to }}"></td>
+          <td>{{ c.source }}</td>
           <td>
             <select name="status">
               <option value="Active" {% if c.status == "Active" %}selected{% endif %}>Active</option>
@@ -71,10 +93,11 @@
       {% endfor %}
     {% else %}
       <tr>
-        <td colspan="11">No contracts found.</td>
+        <td colspan="12">No contracts found.</td>
       </tr>
     {% endif %}
   </table>
+
 </section>
 
 {% endblock %}
